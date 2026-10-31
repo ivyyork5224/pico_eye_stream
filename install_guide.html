@@ -1,0 +1,333 @@
+<title>Pico Neo 3 Eye Tracking Setup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single reading column with a sticky section index on wide screens;
+   steps are a real sequence, so they are numbered; commands get copy buttons. */
+:root {
+  --bg: #f5f7f8;
+  --surface: #ffffff;
+  --ink: #15201f;
+  --muted: #55625f;
+  --line: #d9e1e0;
+  --accent: #0d7470;        /* infrared-filter teal */
+  --accent-soft: #e0f0ee;
+  --warn: #a8471a;
+  --warn-soft: #fbece3;
+  --code-bg: #eef2f1;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1514; --surface: #161e1d; --ink: #e3ecea; --muted: #9aaba7; --line: #2a3735;
+    --accent: #4fc9c0; --accent-soft: #15302d; --warn: #f0a070; --warn-soft: #33221a; --code-bg: #1c2625;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1514; --surface: #161e1d; --ink: #e3ecea; --muted: #9aaba7; --line: #2a3735;
+  --accent: #4fc9c0; --accent-soft: #15302d; --warn: #f0a070; --warn-soft: #33221a; --code-bg: #1c2625;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 17px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1060px; margin: 0 auto; padding-block: 48px 80px;
+  display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 56px; }
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 28px 56px; } nav.toc { display: none; } }
+nav.toc { position: sticky; top: calc(24px + env(safe-area-inset-top, 0px)); align-self: start; font-size: 14px; }
+nav.toc p { font: 600 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+nav.toc a { display: block; padding: 5px 0 5px 12px; color: var(--muted); text-decoration: none; border-left: 2px solid var(--line); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+main { min-width: 0; }
+main > section { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; }
+h1 { font-weight: 800; font-size: clamp(32px, 6vw, 52px); margin: 0 0 16px; letter-spacing: -.01em; }
+h2 { font-weight: 800; font-size: 28px; margin: 64px 0 16px; padding-top: 8px; }
+h3 { font-weight: 600; font-size: 19px; margin: 32px 0 8px; }
+p { margin: 0 0 14px; }
+a { color: var(--accent); }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+.lede { font-size: 19px; color: var(--muted); max-width: 60ch; }
+code { font: 0.86em var(--mono); background: var(--code-bg); padding: 2px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+/* signal path */
+.path { margin: 28px 0 8px; display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; font-size: 14px; }
+.path .node { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; min-width: 0; }
+.path .node b { display: block; font-family: var(--display); font-size: 15px; }
+.path .node span { color: var(--muted); font: 12px var(--mono); }
+.path .arrow { align-self: center; color: var(--accent); font: 600 12px var(--mono); white-space: nowrap; }
+
+.gets { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 24px 0 0; }
+.gets div { padding: 14px 16px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+.gets h3 { margin: 0 0 6px; font-size: 15px; font-family: var(--mono); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.gets .yes h3 { color: var(--accent); }
+.gets .no h3 { color: var(--warn); }
+.gets ul { margin: 0; padding-left: 18px; }
+
+/* tables */
+.table { overflow-x: auto; margin: 12px 0 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 10px 14px; vertical-align: top; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); }
+td:first-child { font-weight: 700; }
+.tag { display: inline-block; font: 600 11px/1.6 var(--mono); padding: 0 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.tag.warn { background: var(--warn-soft); color: var(--warn); }
+
+/* steps */
+ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 16px 0 0; display: grid; gap: 22px; }
+ol.steps > li { counter-increment: s; position: relative; padding-left: 52px; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: -2px; width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center; font: 800 16px var(--display); color: var(--accent); border: 2px solid var(--accent); }
+ol.steps h3 { margin: 2px 0 6px; }
+ol.steps ul, ol.steps ol { padding-left: 20px; margin: 6px 0 10px; }
+
+/* commands */
+.cmd { position: relative; margin: 10px 0 14px; }
+.cmd pre { margin: 0; padding: 14px 92px 14px 16px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+  overflow-x: auto; font: 13.5px/1.55 var(--mono); white-space: pre; }
+.cmd button { position: absolute; top: 8px; right: 8px; font: 600 12px var(--mono); padding: 6px 10px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.cmd button:hover, .cmd button:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+
+.note { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+.note b { color: var(--warn); }
+.tip { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; max-width: 68ch; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sections">
+    <p>On this page</p>
+    <a href="#need">What you need</a>
+    <a href="#setup">One-time setup</a>
+    <a href="#session">Every session</a>
+    <a href="#trouble">Troubleshooting</a>
+    <a href="#report">Reporting back</a>
+    <a href="#cameras">Camera route</a>
+    <a href="#uninstall">Uninstall</a>
+    <a href="#build">Building from source</a>
+  </nav>
+
+  <main>
+    <section>
+      <p class="eyebrow">Pico Neo 3 Pro Eye · VRCFaceTracking · VRChat</p>
+      <h1>Pico Neo 3 eye tracking in VRChat</h1>
+      <p class="lede">Gets the headset's built-in Tobii eye tracking into VRChat, and it keeps working while the headset streams PC VR. No root, no headset app: a small program runs on the headset over adb and sends the data to your PC over Wi-Fi.</p>
+
+      <div class="path" role="img" aria-label="Headset eyestream sends UDP port 7777 over Wi-Fi to VRCFaceTracking on the PC, which drives VRChat">
+        <div class="node"><b>Headset</b><span>eyestream · 90 Hz</span></div>
+        <div class="arrow">Wi-Fi · UDP 7777 →</div>
+        <div class="node"><b>VRCFaceTracking</b><span>"Pico Neo 3 Pro Eye" module</span></div>
+        <div class="arrow">OSC →</div>
+        <div class="node"><b>VRChat</b><span>your avatar's eyes</span></div>
+      </div>
+
+      <div class="gets">
+        <div class="yes"><h3>You get</h3><ul><li>Gaze, where you look</li><li>Blinks and winks, each eye separately</li><li>About 90 updates per second</li></ul></div>
+        <div class="no"><h3>You don't get</h3><ul><li>Half-closed eyelids or squints: Pico reports eyes only as open or closed (blinks are smoothed)</li><li>Separate gaze per eye: both eyes use the combined gaze</li></ul></div>
+      </div>
+      <div class="tip" style="margin-top:22px">
+        <p style="margin:0 0 8px"><b>Testing this? Start here.</b></p>
+        <ul style="margin:0; padding-left:20px">
+          <li>You need the zip <code>pico_eye_stream_test.zip</code> (85 KB) from whoever shared this page. Unblock it before extracting (setup step 1) and keep the folder together; the launchers find everything relative to themselves.</li>
+          <li>Use <b>VRCFaceTracking from Steam</b>. The Microsoft Store version doesn't work with this module.</li>
+          <li>The firewall rule (setup step 5) needs <b>PowerShell as Administrator</b>.</li>
+          <li>Run the headset's eye tracking calibration before testing.</li>
+          <li>If anything goes wrong, see <a href="#report">Reporting back</a> for what to send.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="need">
+      <h2>What you need</h2>
+      <h3>Hardware</h3>
+      <ul>
+        <li>Pico <b>Neo 3 Pro Eye</b> (the Eye model; tested on system 5.11.3, Android 10), with eye tracking switched on in its settings</li>
+        <li>Windows 10 or 11 PC on the <b>same network</b> as the headset (PC wired and headset on the same router's Wi-Fi is fine)</li>
+        <li>A USB-C <b>data</b> cable. Some cables only charge.</li>
+      </ul>
+
+      <h3>Required software</h3>
+      <div class="table"><table>
+        <thead><tr><th>Software</th><th>Where</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Android Platform-Tools (adb)</td><td><a href="https://developer.android.com/tools/releases/platform-tools">developer.android.com</a></td><td>Unzip to <code>C:\platform-tools</code>. Talks to the headset.</td></tr>
+          <tr><td>VRCFaceTracking 6</td><td>Steam</td><td><span class="tag warn">Steam only</span> The Microsoft Store version (5.x) crashes on this module.</td></tr>
+          <tr><td>.NET 10 Desktop Runtime</td><td><a href="https://dotnet.microsoft.com/download/dotnet/10.0">dotnet.microsoft.com</a></td><td>Only if VRCFaceTracking won't start.</td></tr>
+          <tr><td>SteamVR</td><td>Steam</td><td></td></tr>
+          <tr><td>PICO Business Streaming</td><td>Pico enterprise downloads</td><td>Wi-Fi streaming. Tested pair: PC 2.0.0 with headset 2.0.0. Versions must match.</td></tr>
+          <tr><td>or PICO Link</td><td>Pico enterprise downloads</td><td>DisplayPort cable mode. Tested pair: PC 1.2.9.1 with headset 1.2.9.</td></tr>
+          <tr><td>VRChat</td><td>Steam</td><td>With an avatar that has VRCFaceTracking eye parameters.</td></tr>
+          <tr><td>Windows PowerShell 5.1</td><td>Built into Windows</td><td>Runs the <code>.cmd</code> launchers. Nothing to install.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Nothing is installed on the headset from a store. The two small programs (<code>eyestream</code>, <code>eyecam</code>) are copied over adb by the start script.</p>
+
+      <h3>Optional software</h3>
+      <div class="table"><table>
+        <thead><tr><th>Software</th><th>Needed for</th></tr></thead>
+        <tbody>
+          <tr><td>Baballonia (Steam) or EyeTrackVR</td><td>The experimental camera route for smoother eyelids</td></tr>
+          <tr><td>Python 3</td><td><code>pc\pico_eye_receiver.py</code>: live readout, CSV logging, raw OSC without VRCFaceTracking</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Only to rebuild from source</h3>
+      <div class="table"><table>
+        <thead><tr><th>Software</th><th>Needed for</th></tr></thead>
+        <tbody>
+          <tr><td>Android NDK r27c</td><td><code>headset\eyestream.c</code>, <code>headset\eyecam.c</code></td></tr>
+          <tr><td>.NET 10 SDK</td><td><code>vrcft\PicoNeo3EyeModule.cs</code></td></tr>
+          <tr><td>stb_image_write.h</td><td>Included in <code>third_party\</code> (public-domain JPEG encoder)</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="setup">
+      <h2>One-time setup</h2>
+      <ol class="steps">
+        <li>
+          <h3>Unpack the folder</h3>
+          <p>Before extracting the zip, right-click it → <b>Properties</b> → tick <b>Unblock</b> if it's shown → OK. Otherwise Windows may warn about the <code>.cmd</code> files every time. Extract it somewhere permanent, for example <code>C:\pico_eye_stream</code>.</p>
+        </li>
+        <li>
+          <h3>Install adb on the PC</h3>
+          <p>Download <b>SDK Platform-Tools for Windows</b> from <a href="https://developer.android.com/tools/releases/platform-tools">developer.android.com</a> and unzip it so you have <code>C:\platform-tools\adb.exe</code>. A <code>platform-tools</code> folder inside <code>pico_eye_stream</code>, or adb on your PATH, works too.</p>
+        </li>
+        <li>
+          <h3>Turn on developer mode in the headset</h3>
+          <ul>
+            <li><b>Settings → General → About</b>: click <b>Software Version</b> about 7 times.</li>
+            <li><b>Settings → Developer</b>: turn on <b>USB debugging</b>.</li>
+            <li>Run the headset's <b>eye tracking calibration</b>. Without it the data comes back invalid.</li>
+          </ul>
+        </li>
+        <li>
+          <h3>Connect over USB once</h3>
+          <p>Plug the headset in with the data cable. In the headset, accept <b>Allow USB debugging?</b> and tick <b>Always allow from this computer</b>. Then check on the PC:</p>
+          <div class="cmd"><pre>C:\platform-tools\adb.exe devices</pre><button type="button" id="copy-adb-devices">Copy</button></div>
+          <p>You should see a line ending in <code>device</code>. If it says <code>unauthorized</code>, accept the prompt in the headset.</p>
+        </li>
+        <li>
+          <h3>Allow VRCFaceTracking through the firewall</h3>
+          <p>VRCFaceTracking's module process has to receive the headset's packets. Open <b>PowerShell as Administrator</b> and run:</p>
+          <div class="cmd"><pre>New-NetFirewallRule -DisplayName "VRCFT Pico Neo 3 eye (UDP 7777)" -Direction Inbound -Program "C:\Program Files (x86)\Steam\steamapps\common\VRCFaceTracking\VRCFaceTracking.ModuleProcess.exe" -Protocol UDP -LocalPort 7777 -Profile Private -Action Allow</pre><button type="button" id="copy-firewall">Copy</button></div>
+          <p>Change the path if Steam lives elsewhere. Your network must be set to <b>Private</b> in Windows.</p>
+        </li>
+        <li>
+          <h3>Install the VRCFaceTracking module</h3>
+          <p>Close VRCFaceTracking, then double-click <code>Install VRCFT Module.cmd</code>.</p>
+          <p>If it lists other eye modules (ETVR, Baballonia, Pico 4), remove or disable them in VRCFaceTracking's <b>Module Registry</b>. VRCFaceTracking gives the eyes to whichever eye module loads first.</p>
+        </li>
+        <li>
+          <h3>Optional: shortcut and voice output</h3>
+          <p>Make a desktop shortcut to <code>Start Eye Tracking.cmd</code>.</p>
+          <p>The start script speaks its result on the default audio output. To send it to your headphones instead, put part of their device name in <code>voice_device.txt</code>, for example <code>Stealth 600</code>.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section id="session">
+      <h2>Every session</h2>
+      <ol class="steps">
+        <li><h3>Turn on the headset</h3><p>If it was rebooted, <b>plug in USB first</b>. adb over Wi-Fi switches off on every reboot.</p></li>
+        <li><h3>Double-click Start Eye Tracking.cmd</h3><p>It finds the headset, switches adb to Wi-Fi, reads the headset's current IP and starts the sender. It <b>speaks</b> the result, so you can hear it with the headset on. "You can unplug the USB cable" means it's running.</p></li>
+        <li><h3>Start streaming and VRCFaceTracking</h3><p>Business Streaming or PICO Link, then VRCFaceTracking from Steam.</p></li>
+        <li><h3>Start VRChat</h3><p>Use an eye-tracked avatar and check in a mirror.</p></li>
+      </ol>
+      <div class="tip">The sender keeps running until the headset turns off. It pauses while the headset sleeps and resumes about 5 seconds after it wakes. <code>Stop Eye Tracking.cmd</code> stops it early.</div>
+    </section>
+
+    <section id="trouble">
+      <h2>Troubleshooting</h2>
+      <div class="table"><table>
+        <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>"ADB was not found"</td><td>Install Platform-Tools (setup step 1).</td></tr>
+          <tr><td>"Headset not found" or "Can't reach the headset over Wi-Fi"</td><td>Plug in USB and run Start again. Look for the Allow USB debugging prompt in the headset.</td></tr>
+          <tr><td>"The headset is asking for permission"</td><td>Put the headset on and accept <b>Allow USB debugging</b>, then run Start again.</td></tr>
+          <tr><td>Windows sees the headset only as an audio device</td><td>USB debugging is off, or the cable or DisplayPort mode is in the way. Use a plain USB-C data cable without the DP cable.</td></tr>
+          <tr><td>Module shows in VRCFaceTracking, eyes don't move</td><td>Firewall rule missing (setup step 4), or another eye module took the eye slot. On VRCFaceTracking's <b>Output</b> page, look for <code>Tracking initialized via ...</code>.</td></tr>
+          <tr><td>Cameras show "no answer", or the sender log says <code>no new frames</code> while the headset is awake</td><td>Pico's eye service got stuck. Reboot the headset, plug in USB, run Start again.</td></tr>
+          <tr><td>Stops after the headset was off your face</td><td>Normal. It resumes within about 5 seconds of the headset waking.</td></tr>
+          <tr><td>VRCFaceTracking crashes on its module page</td><td>You're running the Microsoft Store version 5.x. Use the Steam version.</td></tr>
+          <tr><td>PC streaming can't find the headset</td><td>Disable extra network adapters (VPNs such as Hamachi, second network cards) in <code>ncpa.cpl</code>.</td></tr>
+        </tbody>
+      </table></div>
+      <p>To see what the headset is doing:</p>
+      <div class="cmd"><pre>C:\platform-tools\adb.exe shell "tail -3 /data/local/tmp/eyestream.log"</pre><button type="button" id="copy-log">Copy</button></div>
+      <p><code>90 pkt/s, 2600 valid</code> per 30 seconds means it's tracking. <code>0 valid</code> means the headset isn't on your face.</p>
+
+      <h3 id="report">Reporting back</h3>
+      <p>If something doesn't work, send these to whoever gave you the folder:</p>
+      <ol>
+        <li>What you did and what happened, or a photo of the Start window.</li>
+        <li>The headset log:
+          <div class="cmd"><pre>C:\platform-tools\adb.exe shell "cat /data/local/tmp/eyestream.log"</pre><button type="button" id="copy-report-log">Copy</button></div></li>
+        <li>VRCFaceTracking's <b>Output</b> page (copy all), especially the lines with <code>Tracking initialized</code> and <code>Pico</code>.</li>
+        <li>Headset system version (Settings → General → About) and your streaming app and its version.</li>
+      </ol>
+    </section>
+
+    <section id="cameras">
+      <h2>Camera route with Baballonia</h2>
+      <p><span class="tag warn">Experimental</span> <code>Start Eye Tracking + Cameras.cmd</code> also streams the headset's <b>infrared eye camera images</b> (208×200 per eye, about 77 fps), so image-based trackers like Baballonia or EyeTrackVR can estimate smooth eyelids.</p>
+      <ul>
+        <li>Left eye <code>http://&lt;headset-ip&gt;:8080/</code>, right eye <code>http://&lt;headset-ip&gt;:8081/</code>. <code>Show Eye Camera Addresses.cmd</code> shows them with Copy buttons and updates Baballonia's saved addresses.</li>
+        <li>In Baballonia: OSC send port <b>8888</b>, receive port <b>8889</b>, VRCFT module mode <b>Both</b>, Native VRC Eye Tracking <b>off</b>. Then run its eye calibration.</li>
+        <li>In VRCFaceTracking, only the <b>Baballonia</b> module may claim the eyes. Remove the Pico Neo 3 and ETVR modules.</li>
+      </ul>
+      <div class="note"><b>Know before you use it.</b> Baballonia's models are trained on DIY eye cameras, and results on the Pico's through-the-lens images were weak in testing. The images come from Pico's debug image dump, which writes to the headset's storage; each frame is deleted within milliseconds. Run it only when you use it.</div>
+    </section>
+
+    <section id="uninstall">
+      <h2>Uninstall</h2>
+      <p>Remove the module (with VRCFaceTracking closed):</p>
+      <div class="cmd"><pre>powershell -ExecutionPolicy Bypass -File install_vrcft_module.ps1 -Remove</pre><button type="button" id="copy-remove">Copy</button></div>
+      <p>Remove the programs from the headset:</p>
+      <div class="cmd"><pre>C:\platform-tools\adb.exe shell rm /data/local/tmp/eyestream /data/local/tmp/eyecam /data/local/tmp/eyeprobe</pre><button type="button" id="copy-rm">Copy</button></div>
+      <p>Remove the firewall rule (PowerShell as Administrator):</p>
+      <div class="cmd"><pre>Remove-NetFirewallRule -DisplayName "VRCFT Pico Neo 3 eye (UDP 7777)"</pre><button type="button" id="copy-fw-rm">Copy</button></div>
+    </section>
+
+    <section id="build">
+      <h2>Building from source</h2>
+      <p>Only needed if you change the code. Prebuilt files ship in <code>headset\</code> and <code>vrcft\dist\</code>.</p>
+      <h3>Headset programs (Android NDK r27c)</h3>
+      <div class="cmd"><pre>&lt;ndk&gt;\toolchains\llvm\prebuilt\windows-x86_64\bin\aarch64-linux-android29-clang.cmd -O2 -o headset\eyestream headset\eyestream.c -ldl
+&lt;ndk&gt;\toolchains\llvm\prebuilt\windows-x86_64\bin\aarch64-linux-android29-clang.cmd -O2 -o headset\eyecam headset\eyecam.c -lm</pre><button type="button" id="copy-ndk">Copy</button></div>
+      <p>After rebuilding, delete the old copy on the headset so the start script pushes the new one.</p>
+      <h3>VRCFaceTracking module (.NET 10 SDK)</h3>
+      <div class="cmd"><pre>dotnet build vrcft\PicoNeo3EyeModule.csproj -c Release -o vrcft\dist</pre><button type="button" id="copy-dotnet">Copy</button></div>
+      <p>Then run <code>Install VRCFT Module.cmd</code>. How it works and the data layout are in <code>README.md</code> in the folder.</p>
+    </section>
+
+    <footer>Unofficial community tool, not made or supported by Pico or Tobii. Test build of 31 October 2026, tested on one Neo 3 Pro Eye (system 5.11.3) with Business Streaming 2.0.0 and VRCFaceTracking 6.0.</footer>
+  </main>
+</div>
+
+<script>
+document.querySelectorAll('.cmd button').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var text = btn.parentElement.querySelector('pre').textContent;
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); };
+    var fallback = function () {
+      var r = document.createRange(); r.selectNodeContents(btn.parentElement.querySelector('pre'));
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      btn.textContent = 'Press Ctrl+C';
+    };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+  });
+});
+</script>
