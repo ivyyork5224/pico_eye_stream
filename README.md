@@ -68,3 +68,5 @@ debounces each eye (2 frames) and eases between states (~25 ms closing, ~45 ms o
 If the sender is restarted while an old copy is still stopping, Pico's eye service can get stuck (it reports
 "started" but gives no new frames). `start_eyestream.ps1` waits for old copies to exit to avoid this. If it still
 happens, reboot the headset.
+
+Note this was made by AI
