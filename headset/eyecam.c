@@ -1,9 +1,13 @@
 // eyecam - streams the Pico Neo 3 Pro Eye's infrared eye cameras to the PC as MJPEG,
 // for EyeTrackVR / Baballonia. Runs from adb shell like eyestream.
 //
-//   /data/local/tmp/eyecam [quality=75] [max_fps=90]
+//   /data/local/tmp/eyecam [quality=75] [max_fps=90] [min_fps=30]
 //   left camera:  http://<headset-ip>:8080/     right camera: http://<headset-ip>:8081/
 //   any port also serves /left, /right, /both and /snap.jpg (single image)
+//
+// Only views someone is watching get encoded. The frame rate follows the headset's load:
+// above LOAD_HIGH it steps down towards min_fps, below LOAD_LOW back up towards max_fps,
+// so the eye cameras give way to head tracking when the headset gets busy.
 //
 // Frames come from Pico's eye tracking debug dump: with debug.pxr.et.tobii.dumpimg=1 the
 // eye service writes every combined frame to /sdcard/pvreyetracking/<n>.raw
@@ -25,9 +29,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/file.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/system_properties.h>
+#include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -52,6 +58,21 @@ static unsigned long g_frame_no = 0;
 static volatile sig_atomic_t g_stop = 0;
 static int g_quality = 75;
 static int g_max_fps = 90;
+static int g_min_fps = 30;
+static volatile int g_clients[VIEW_COUNT];
+
+// load average (1 min) thresholds for the 8-core headset, checked every LOAD_CHECK_S
+#define LOAD_HIGH 9.0
+#define LOAD_LOW 6.0
+#define LOAD_CHECK_S 5.0
+#define FPS_STEP 15
+
+static double load1(void) {
+    double l = 0;
+    FILE* f = fopen("/proc/loadavg", "r");
+    if (f) { if (fscanf(f, "%lf", &l) != 1) l = 0; fclose(f); }
+    return l;
+}
 
 static void on_signal(int sig) { (void)sig; g_stop = 1; }
 
@@ -124,10 +145,23 @@ static void* grab_thread(void* arg) {
     (void)arg;
     static unsigned char frame[FRAME_BYTES];
     jpg_buf work[VIEW_COUNT] = {{0}};
-    double min_dt = 1.0 / g_max_fps, last = 0, last_report = now_s(), last_frame = now_s();
+    int fps = g_max_fps;
+    double min_dt = 1.0 / fps, last = 0, last_report = now_s(), last_frame = now_s(), last_load = 0;
     int count = 0;
     while (!g_stop) {
         double t = now_s();
+        if (t - last_load >= LOAD_CHECK_S) {
+            last_load = t;
+            double l = load1();
+            int want = fps;
+            if (l > LOAD_HIGH) want = fps - FPS_STEP < g_min_fps ? g_min_fps : fps - FPS_STEP;
+            else if (l < LOAD_LOW) want = fps + FPS_STEP > g_max_fps ? g_max_fps : fps + FPS_STEP;
+            if (want != fps) {
+                printf("[eyecam] load %.1f: %d -> %d fps\n", l, fps, want);
+                fps = want;
+                min_dt = 1.0 / fps;
+            }
+        }
         if (t - last < min_dt || !grab_newest(frame)) {
             // re-arm the dump if it stopped (e.g. the eye service restarted)
             if (t - last_frame > 3.0) {
@@ -138,12 +172,16 @@ static void* grab_thread(void* arg) {
             continue;
         }
         last = last_frame = t;
-        encode(&work[VIEW_LEFT], frame, HALF_W, FULL_W);
-        encode(&work[VIEW_RIGHT], frame + HALF_W, HALF_W, FULL_W);
-        encode(&work[VIEW_BOTH], frame, FULL_W, FULL_W);
+        // only encode what someone is watching (a new viewer gets the next frame)
+        int want[VIEW_COUNT];
+        for (int v = 0; v < VIEW_COUNT; v++) want[v] = g_clients[v] > 0;
+        if (want[VIEW_LEFT]) encode(&work[VIEW_LEFT], frame, HALF_W, FULL_W);
+        if (want[VIEW_RIGHT]) encode(&work[VIEW_RIGHT], frame + HALF_W, HALF_W, FULL_W);
+        if (want[VIEW_BOTH]) encode(&work[VIEW_BOTH], frame, FULL_W, FULL_W);
 
         pthread_mutex_lock(&g_lock);
         for (int v = 0; v < VIEW_COUNT; v++) {
+            if (!want[v]) { g_jpg[v].len = 0; continue; }  // no stale image for a later viewer
             jpg_buf tmp = g_jpg[v];
             g_jpg[v] = work[v];
             work[v] = tmp;
@@ -154,8 +192,9 @@ static void* grab_thread(void* arg) {
 
         count++;
         if (t - last_report >= 30.0) {
-            printf("[eyecam] %.1f fps, jpeg %d+%d bytes\n", count / (t - last_report),
-                   g_jpg[VIEW_LEFT].len, g_jpg[VIEW_RIGHT].len);
+            printf("[eyecam] %.1f fps (limit %d, load %.1f), jpeg %d+%d bytes, clients left %d right %d\n",
+                   count / (t - last_report), fps, load1(), g_jpg[VIEW_LEFT].len, g_jpg[VIEW_RIGHT].len,
+                   g_clients[VIEW_LEFT], g_clients[VIEW_RIGHT]);
             count = 0;
             last_report = t;
         }
@@ -191,6 +230,14 @@ static void* client_thread(void* arg) {
 
     int one = 1;
     setsockopt(c.fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
+    // A viewer that stops reading (Wi-Fi hiccup, half-open connection) is dropped
+    // after 2 s instead of lingering, so its reconnect gets a clean stream.
+    struct timeval tv = {2, 0};
+    setsockopt(c.fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv);
+    setsockopt(c.fd, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof one);
+    const char* vname = view == VIEW_LEFT ? "left" : view == VIEW_RIGHT ? "right" : "both";
+    __sync_fetch_and_add(&g_clients[view], 1);
+    if (!snap) printf("[eyecam] %s viewer connected (%d)\n", vname, g_clients[view]);
     jpg_buf local = {0};
     unsigned long seen = 0;
     char hdr[256];
@@ -199,7 +246,7 @@ static void* client_thread(void* arg) {
         const char* h = "HTTP/1.1 200 OK\r\n"
                         "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n"
                         "Cache-Control: no-cache\r\nConnection: close\r\n\r\n";
-        if (send_all(c.fd, h, strlen(h))) { close(c.fd); return NULL; }
+        if (send_all(c.fd, h, strlen(h))) goto done;
     }
     while (!g_stop) {
         pthread_mutex_lock(&g_lock);
@@ -227,6 +274,9 @@ static void* client_thread(void* arg) {
         int hl = snprintf(hdr, sizeof hdr, "--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n", local.len);
         if (send_all(c.fd, hdr, hl) || send_all(c.fd, local.data, local.len) || send_all(c.fd, "\r\n", 2)) break;
     }
+done:
+    __sync_fetch_and_sub(&g_clients[view], 1);
+    if (!snap) printf("[eyecam] %s viewer disconnected (%d left)\n", vname, g_clients[view]);
     free(local.data);
     close(c.fd);
     return NULL;
@@ -265,15 +315,25 @@ static void* server_thread(void* arg) {
 int main(int argc, char** argv) {
     if (argc > 1) g_quality = atoi(argv[1]);
     if (argc > 2) g_max_fps = atoi(argv[2]);
+    if (argc > 3) g_min_fps = atoi(argv[3]);
     if (g_max_fps < 1) g_max_fps = 1;
+    if (g_min_fps < 1) g_min_fps = 1;
+    if (g_min_fps > g_max_fps) g_min_fps = g_max_fps;
     setvbuf(stdout, NULL, _IOLBF, 0);
     signal(SIGTERM, on_signal);
     signal(SIGINT, on_signal);
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
 
+    // only one copy (a second one would fight over the dump files and ports)
+    int lock = open("/data/local/tmp/eyecam.lock", O_CREAT | O_RDWR, 0644);
+    if (lock < 0 || flock(lock, LOCK_EX | LOCK_NB) != 0) {
+        printf("[eyecam] already running, not starting a second copy\n");
+        return 3;
+    }
+
     __system_property_set(DUMP_PROP, "1");
-    printf("[eyecam] dump on, quality %d, max %d fps\n", g_quality, g_max_fps);
+    printf("[eyecam] dump on, quality %d, %d-%d fps by load\n", g_quality, g_min_fps, g_max_fps);
 
     pthread_t grab, srv[2];
     pthread_create(&grab, NULL, grab_thread, NULL);

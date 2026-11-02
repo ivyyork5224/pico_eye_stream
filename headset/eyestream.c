@@ -17,11 +17,13 @@
 
 #include <arpa/inet.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/file.h>
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
@@ -54,6 +56,14 @@ int main(int argc, char** argv) {
     signal(SIGTERM, on_signal);
     signal(SIGINT, on_signal);
     signal(SIGHUP, SIG_IGN);
+
+    // Only one copy: two clients starting eye tracking at once can leave Pico's
+    // eye service stuck until the headset reboots. The lock is released on exit.
+    int lock = open("/data/local/tmp/eyestream.lock", O_CREAT | O_RDWR, 0644);
+    if (lock < 0 || flock(lock, LOCK_EX | LOCK_NB) != 0) {
+        printf("eyestream is already running, not starting a second copy\n");
+        return 3;
+    }
 
     void* h = dlopen("libeyetrackingclient.pxr.so", RTLD_NOW);
     if (!h) { printf("dlopen failed: %s\n", dlerror()); return 1; }

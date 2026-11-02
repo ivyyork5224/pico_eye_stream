@@ -27,7 +27,17 @@ function Say($text) {
             }
         }
         [void]$v.Speak($text)
-    } catch {}
+    } catch {
+        # chosen device busy (e.g. held by Voicemeeter): use the default output
+        try { [void](New-Object -ComObject SAPI.SpVoice).Speak($text) } catch {}
+    }
+}
+
+# Only one start at a time (two senders starting together can hang Pico's eye service)
+$mutex = New-Object System.Threading.Mutex($false, 'Local\PicoEyeStreamStart')
+if (-not $mutex.WaitOne(0)) {
+    Say "Eye tracking is already being started in another window."
+    exit 1
 }
 
 if (-not $adb) {
@@ -116,8 +126,21 @@ if ($Cameras) {
     Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$(Join-Path $PSScriptRoot 'show_eye_addresses.ps1')`""
 }
 
+# Pico's eye service sometimes hangs (after hours of running, or two clients at once).
+# Then it reports "started" but delivers no frames, and only a headset reboot fixes it.
+Start-Sleep 6
+$log = (& $adb shell "cat /data/local/tmp/eyestream.log") -join "`n"
+$awake = (& $adb shell "dumpsys power | grep mWakefulness=") -match 'Awake'
+if ($awake -and ($log -notmatch 'StartEyeTracking' -or $log -match 'no new frames')) {
+    Say "Pico's eye tracking service on the headset is stuck. Please reboot the headset, plug in U S B, and run this again."
+    Write-Host $log
+    exit 1
+}
+
 $procId = & $adb shell "pidof eyestream"
-if ($procId) {
+if ($procId -and -not $awake) {
+    Say "Eye tracking is ready and starts when you put the headset on. You can unplug the U S B cable."
+} elseif ($procId) {
     if ($Cameras) { Say "Eye tracking and eye cameras are running. You can unplug the U S B cable." }
     else { Say "Eye tracking sender is running. You can unplug the U S B cable." }
     & $adb shell "cat /data/local/tmp/eyestream.log"

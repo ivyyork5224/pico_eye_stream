@@ -122,7 +122,7 @@ $form.Controls.Add($close)
 $check = {
     foreach ($pair in @(@($leftState, $left), @($rightState, $right))) {
         $ok = Test-Cam $pair[1]
-        $pair[0].Text = if ($ok) { 'online' } else { 'no answer' }
+        $pair[0].Text = if ($ok) { 'online' } else { 'no picture yet' }
         $pair[0].ForeColor = if ($ok) { [System.Drawing.Color]::Green } else { [System.Drawing.Color]::Firebrick }
     }
 }
