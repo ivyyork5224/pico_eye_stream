@@ -131,19 +131,27 @@ if ($public) {
 # --- 5. Headset -------------------------------------------------------------------------
 Step 5 "Headset connection over USB"
 & $adb start-server | Out-Null
+# checks every 2 s by itself, so accepting the prompt in the headset is enough; help is printed once per state
+$shown = ''
 while ($true) {
     $lines = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\S' -and $_ -notmatch ':' }
     if ($lines -match '\sdevice$') { Ok "Headset connected"; break }
     if ($lines -match '\sunauthorized$') {
-        WaitEnter "Put the headset on: accept 'Allow USB debugging?' and tick 'Always allow from this computer'."
-        continue
+        if ($shown -ne 'unauthorized') {
+            Write-Host "  Put the headset on: accept 'Allow USB debugging?' and tick 'Always allow from this computer'." -ForegroundColor Yellow
+            Write-Host "  Waiting for the headset..."
+            $shown = 'unauthorized'
+        }
+    } elseif ($shown -ne 'missing') {
+        Write-Host "  The headset isn't connected yet. On the headset:" -ForegroundColor Yellow
+        Write-Host "    1. Settings > General > About: click 'Software Version' about 7 times (turns on developer mode)."
+        Write-Host "    2. Settings > Developer: turn on 'USB debugging'."
+        Write-Host "    3. Plug it into this PC with a USB-C data cable (some cables only charge)."
+        Write-Host "    4. In the headset, accept 'Allow USB debugging?' and tick 'Always allow'."
+        Write-Host "  Waiting for the headset (this checks by itself)..."
+        $shown = 'missing'
     }
-    Write-Host "  The headset isn't connected yet. On the headset:" -ForegroundColor Yellow
-    Write-Host "    1. Settings > General > About: click 'Software Version' about 7 times (turns on developer mode)."
-    Write-Host "    2. Settings > Developer: turn on 'USB debugging'."
-    Write-Host "    3. Plug it into this PC with a USB-C data cable (some cables only charge)."
-    Write-Host "    4. In the headset, accept 'Allow USB debugging?' and tick 'Always allow'."
-    [void](Read-Host "  Press Enter to check again")
+    Start-Sleep 2
 }
 Write-Host "  Also run the headset's eye tracking calibration (in its Settings) if you haven't yet." -ForegroundColor Yellow
 Write-Host "  Calibration is per person: anyone else using the headset should run it for themselves." -ForegroundColor Yellow
