@@ -59,7 +59,28 @@ copied over adb by the start script.
 
 ---
 
-## Part 1: one-time setup
+## Quick setup (recommended)
+
+1. Extract the zip somewhere permanent, for example `C:\pico_eye_stream`, and keep the folder together.
+2. Double-click **`Set Up Everything.cmd`** and follow what it says. It:
+   - downloads adb (Android platform-tools) from Google into this folder
+   - checks for Steam, SteamVR and VRCFaceTracking, and opens Steam's install page for any that are missing
+   - installs the .NET 10 runtime if it's missing
+   - adds the Windows Firewall rule (click **Yes** when Windows asks for admin permission)
+   - walks you through developer mode, USB debugging and the first USB connection on the headset
+   - installs the VRCFT module and puts a **Pico Eye Tracking** shortcut on the desktop
+
+   If it stops at a step (for example "install VRCFaceTracking in Steam"), do that step and run it
+   again. Finished steps are skipped.
+3. Run the headset's **eye tracking calibration** yourself (in the headset's Settings). It's per
+   person, so anyone else who uses the headset should run it too.
+4. Go to **Part 2: every session**.
+
+You still need to set up your PC streaming (Business Streaming or PICO Link) yourself.
+
+The steps below are the same setup done by hand, if you'd rather do that or the script gets stuck.
+
+## Part 1: one-time setup (by hand)
 
 ### 0. Unpack the folder
 

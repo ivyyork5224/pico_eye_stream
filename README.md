@@ -20,6 +20,7 @@ immediately, serves each eye as MJPEG on ports 8080 / 8081, and switches the dum
 | path | what |
 |---|---|
 | `INSTALL.md`, `install_guide.html` | install guide (same content; the HTML is the web page version) |
+| `Set Up Everything.cmd` | first-time setup: gets adb, checks Steam/SteamVR/VRCFT/.NET, firewall, headset, module, shortcut (`setup_everything.ps1`) |
 | `Start Eye Tracking.cmd` | start gaze tracking (runs `start_eyestream.ps1`) |
 | `Start Eye Tracking + Cameras.cmd` | also start the eye camera streams |
 | `Stop Eye Tracking.cmd` | stop both |
