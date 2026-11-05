@@ -160,6 +160,7 @@ To stop it early, run **`Stop Eye Tracking.cmd`**.
 | "The headset is asking for permission" | Put the headset on and accept **Allow USB debugging**, then run Start again. |
 | Windows sees the headset only as an audio device, no adb | USB debugging is off, or the cable/DP mode is blocking it. Use a plain USB-C data cable without the DP cable. |
 | VRCFT shows the module but the eyes don't move | Firewall rule missing (Part 1, step 4). Or another eye module grabbed the eye slot: check VRCFT's **Output** page for `Tracking initialized via ...`. |
+| Eyes shake or jitter, even with strong smoothing | Another program also sends gaze to VRChat. Most often it's **EyeTrackVR** (or Baballonia) on its default settings, which sends straight to VRChat's OSC port 9000. Close it (`Start Eye Tracking` warns when it sees this). Then switch avatar and back, or the eyelids can stay half-closed at its last value. For smooth eyelids from EyeTrackVR, use the `pico_eye_stream_etvr` version. |
 | Eyes jittery, or lag behind quick glances | Edit `settings.txt` in VRCFT's module folder (`%AppData%\VRCFaceTracking\CustomLibs\<module id>\`), then restart VRCFT. Still jittery: lower `gaze_speed` (e.g. 1.5). Laggy on quick glances: raise it (e.g. 5). VRCFT's Output page shows the values in use. |
 | Eyes move the wrong way | Report it (see below); the axes are set in `vrcft/PicoNeo3EyeModule.cs`. |
 | Cameras show "no answer" / sender log says `no new frames` while the headset is awake | Pico's eye service got stuck. Reboot the headset, plug in USB, run Start again. |
