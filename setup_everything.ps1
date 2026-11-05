@@ -177,6 +177,6 @@ Ok "'Pico Eye Tracking' is on your desktop"
 Write-Host "`nSetup is done." -ForegroundColor Green
 Write-Host "Every time you play: turn on the headset, double-click 'Pico Eye Tracking' on the desktop,"
 Write-Host "then start your PC streaming, VRCFaceTracking (from Steam) and VRChat."
-Write-Host "After a headset reboot, plug in USB before double-clicking it."
+Write-Host "If it says it can't reach the headset (can happen after a headset reboot), plug in USB and run it again."
 $go = Read-Host "`nStart eye tracking now? (Y/n)"
 if ($go -notmatch '^[nN]') { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'start_eyestream.ps1') }

@@ -138,8 +138,8 @@ New-NetFirewallRule -DisplayName "VRCFT Pico Neo 3 eye (UDP 7777)" -Direction In
 
 ## Part 2: every session
 
-1. Turn on the headset.
-   **If it was rebooted, plug in USB first**, because adb over Wi-Fi switches off on every reboot.
+1. Turn on the headset. After a reboot, try without the cable first: many headsets keep adb over Wi-Fi on.
+   If Start says it can't reach the headset, plug in USB and run it again (see Troubleshooting).
 2. Double-click **`Start Eye Tracking.cmd`**.
    - It finds the headset, switches adb to Wi-Fi, reads the headset's current IP, and starts the sender.
    - It **speaks** the result (handy with the headset on). "You can unplug the USB cable" means it's running.
@@ -156,14 +156,14 @@ To stop it early, run **`Stop Eye Tracking.cmd`**.
 | Problem | Fix |
 |---|---|
 | "ADB was not found" | Install platform-tools (Part 1, step 1). |
-| "Headset not found" / "Can't reach the headset over Wi-Fi" | Plug in USB and run Start again. Check the "Allow USB debugging" prompt in the headset. |
+| "Headset not found" / "Can't reach the headset over Wi-Fi" | Usually after a headset reboot, on headsets that switch adb over Wi-Fi off when they restart. Plug in USB and run Start again: it switches Wi-Fi adb back on, then the cable can come out. Check the "Allow USB debugging" prompt in the headset. Also check the headset is on the same Wi-Fi as the PC. |
 | "The headset is asking for permission" | Put the headset on and accept **Allow USB debugging**, then run Start again. |
 | Windows sees the headset only as an audio device, no adb | USB debugging is off, or the cable/DP mode is blocking it. Use a plain USB-C data cable without the DP cable. |
 | VRCFT shows the module but the eyes don't move | Firewall rule missing (Part 1, step 4). Or another eye module grabbed the eye slot: check VRCFT's **Output** page for `Tracking initialized via ...`. |
 | Eyes shake or jitter, even with strong smoothing | Another program also sends gaze to VRChat. Most often it's **EyeTrackVR** (or Baballonia) on its default settings, which sends straight to VRChat's OSC port 9000. Close it (`Start Eye Tracking` warns when it sees this). Then switch avatar and back, or the eyelids can stay half-closed at its last value. For smooth eyelids from EyeTrackVR, use the `pico_eye_stream_etvr` version. |
 | Eyes jittery, or lag behind quick glances | Edit `settings.txt` in VRCFT's module folder (`%AppData%\VRCFaceTracking\CustomLibs\<module id>\`), then restart VRCFT. Still jittery: lower `gaze_speed` (e.g. 1.5). Laggy on quick glances: raise it (e.g. 5). VRCFT's Output page shows the values in use. |
 | Eyes move the wrong way | Report it (see below); the axes are set in `vrcft/PicoNeo3EyeModule.cs`. |
-| Cameras show "no answer" / sender log says `no new frames` while the headset is awake | Pico's eye service got stuck. Reboot the headset, plug in USB, run Start again. |
+| Cameras show "no answer" / sender log says `no new frames` while the headset is awake | Pico's eye service got stuck. Reboot the headset and run Start again (plug in USB if it can't reach the headset). |
 | Works, then stops after the headset was off your face | Normal: it resumes within about 5 s of the headset waking. |
 | VRCFT crashes on its module page | You're running the **Microsoft Store** VRCFT 5.x. Use the Steam version. |
 | PC streaming can't find the headset | Disable extra network adapters (VPNs like Hamachi, second NICs) in `ncpa.cpl`. |

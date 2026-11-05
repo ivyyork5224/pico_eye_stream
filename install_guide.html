@@ -247,7 +247,7 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
     <section id="session">
       <h2>Every session</h2>
       <ol class="steps">
-        <li><h3>Turn on the headset</h3><p>If it was rebooted, <b>plug in USB first</b>. adb over Wi-Fi switches off on every reboot.</p></li>
+        <li><h3>Turn on the headset</h3><p>After a reboot, try without the cable first: many headsets keep adb over Wi-Fi on. If Start says it can't reach the headset, <b>plug in USB</b> and run it again.</p></li>
         <li><h3>Double-click Start Eye Tracking.cmd</h3><p>It finds the headset, switches adb to Wi-Fi, reads the headset's current IP and starts the sender. It <b>speaks</b> the result, so you can hear it with the headset on. "You can unplug the USB cable" means it's running.</p></li>
         <li><h3>Start streaming and VRCFaceTracking</h3><p>Business Streaming or PICO Link, then VRCFaceTracking from Steam.</p></li>
         <li><h3>Start VRChat</h3><p>Use an eye-tracked avatar and check in a mirror.</p></li>
@@ -261,11 +261,11 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
         <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
         <tbody>
           <tr><td>"ADB was not found"</td><td>Install Platform-Tools (setup step 1).</td></tr>
-          <tr><td>"Headset not found" or "Can't reach the headset over Wi-Fi"</td><td>Plug in USB and run Start again. Look for the Allow USB debugging prompt in the headset.</td></tr>
+          <tr><td>"Headset not found" or "Can't reach the headset over Wi-Fi"</td><td>Usually after a headset reboot, on headsets that switch adb over Wi-Fi off when they restart. Plug in USB and run Start again: it switches Wi-Fi adb back on, then the cable can come out. Look for the Allow USB debugging prompt in the headset, and check the headset is on the same Wi-Fi as the PC.</td></tr>
           <tr><td>"The headset is asking for permission"</td><td>Put the headset on and accept <b>Allow USB debugging</b>, then run Start again.</td></tr>
           <tr><td>Windows sees the headset only as an audio device</td><td>USB debugging is off, or the cable or DisplayPort mode is in the way. Use a plain USB-C data cable without the DP cable.</td></tr>
           <tr><td>Module shows in VRCFaceTracking, eyes don't move</td><td>Firewall rule missing (setup step 4), or another eye module took the eye slot. On VRCFaceTracking's <b>Output</b> page, look for <code>Tracking initialized via ...</code>.</td></tr>
-          <tr><td>Cameras show "no answer", or the sender log says <code>no new frames</code> while the headset is awake</td><td>Pico's eye service got stuck. Reboot the headset, plug in USB, run Start again.</td></tr>
+          <tr><td>Cameras show "no answer", or the sender log says <code>no new frames</code> while the headset is awake</td><td>Pico's eye service got stuck. Reboot the headset and run Start again (plug in USB if it can't reach the headset).</td></tr>
           <tr><td>Eyes shake or jitter, even with strong smoothing</td><td>Another program is also sending gaze to VRChat. Most often it's <b>EyeTrackVR</b> (or Baballonia) on its default settings, which sends straight to VRChat's port 9000. Close it. After closing it, switch avatar and back, or the eyelids can stay half-closed at its last value.</td></tr>
           <tr><td>Stops after the headset was off your face</td><td>Normal. It resumes within about 5 seconds of the headset waking.</td></tr>
           <tr><td>VRCFaceTracking crashes on its module page</td><td>You're running the Microsoft Store version 5.x. Use the Steam version.</td></tr>
